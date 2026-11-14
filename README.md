@@ -47,6 +47,13 @@ uvicorn app.main:app --reload --port 8000
 Backend: http://localhost:8000
 API docs: http://localhost:8000/docs
 
+Backend implementation, tests, Docker deployment, and GoDaddy DNS setup:
+[backend/README.md](backend/README.md). Teammate request/response schemas:
+[docs/api-contract.md](docs/api-contract.md).
+
+To load backend `.env` settings, start with
+`uvicorn app.main:app --env-file .env --reload --port 8000`.
+
 For Windows, activate the virtual environment
 using .venv\Scripts\activate.
 
