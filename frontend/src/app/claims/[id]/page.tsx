@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import ClaimDetails from "@/components/ClaimDetails";
 
 type ClaimDetailsProps = {
   params: Promise<{ id: string }>;
@@ -25,34 +26,7 @@ export default async function ClaimDetailsPage({
           Claim ID: {id}
         </p>
 
-        <div className="mt-10 space-y-6">
-          <section className="rounded-2xl border border-slate-200 bg-white p-8">
-            <h2 className="text-xl font-semibold">
-              Product Information
-            </h2>
-            <p className="mt-4 text-slate-600">
-              Product information will appear here.
-            </p>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-8">
-            <h2 className="text-xl font-semibold">
-              Evidence
-            </h2>
-            <p className="mt-4 text-slate-600">
-              Uploaded photos and video evidence will appear here.
-            </p>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-8">
-            <h2 className="text-xl font-semibold">
-              AI-Generated Claim
-            </h2>
-            <p className="mt-4 text-slate-600">
-              Your AI-generated claim summary will appear here.
-            </p>
-          </section>
-        </div>
+        <ClaimDetails key={id} id={id} />
       </div>
     </main>
   );

@@ -1,22 +1,25 @@
+"use client";
+
 
 import Link from "next/link";
-
-const demoClaims = [
-  {
-    id: "demo-001",
-    product: "Wireless Headphones",
-    status: "Draft",
-    issue: "Left speaker stopped working",
-  },
-  {
-    id: "demo-002",
-    product: "Water Bottle",
-    status: "Ready for Review",
-    issue: "Cracked near the base",
-  },
-];
+import ClaimCard from "@/components/ClaimCard";
+import { useEffect, useState } from "react";
+import { api, savedClaimIds, type Claim } from "@/lib/api";
 
 export default function ClaimsPage() {
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled(savedClaimIds().map(id => api<Claim>(`/claims/${encodeURIComponent(id)}`))).then(results => {
+      if (!active) return;
+      setClaims(results.flatMap(result => result.status === "fulfilled" ? [result.value] : []));
+      if (results.some(result => result.status === "rejected")) setError("Some saved claims could not be loaded. The backend may be unavailable or the records may no longer exist. Refresh to retry.");
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-12">
       <div className="mx-auto max-w-5xl">
@@ -29,8 +32,9 @@ export default function ClaimsPage() {
             <h1 className="text-4xl font-bold">
               My Claims
             </h1>
+
             <p className="mt-2 text-slate-600">
-              View and manage your claims.
+              Claims created in this browser.
             </p>
           </div>
 
@@ -43,29 +47,11 @@ export default function ClaimsPage() {
         </div>
 
         <div className="mt-10 space-y-4">
-          {demoClaims.map((claim) => (
-            <Link
-              key={claim.id}
-              href={`/claims/${claim.id}`}
-              className="block rounded-2xl border border-slate-200 bg-white p-6 transition hover:border-blue-300"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold">
-                  {claim.product}
-                </h2>
-                <span className="rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-700">
-                  {claim.status}
-                </span>
-              </div>
-
-              <p className="mt-3 text-slate-600">
-                {claim.issue}
-              </p>
-
-              <p className="mt-4 text-sm font-medium text-blue-600">
-                View Details →
-              </p>
-            </Link>
+          {loading && <p role="status">Loading claims…</p>}
+          {error && <p role="alert" className="text-red-700">{error}</p>}
+          {!loading && !claims.length && <p>No claims to display. Start a new claim to get started.</p>}
+          {claims.map((claim) => (
+            <ClaimCard key={claim.id} claim={claim} />
           ))}
         </div>
       </div>
