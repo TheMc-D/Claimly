@@ -2,9 +2,21 @@
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
-from fastapi import FastAPI, File, HTTPException, UploadFile, Response
+
+from fastapi import FastAPI, File, HTTPException, UploadFile, Response, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from app.models.claims import Assessment, CameraInstructions, Claim, CreateClaim, Draft, DraftInput, Evidence, Submission
+
+from app.models.claims import (
+    Assessment,
+    CameraInstructions,
+    Claim,
+    CreateClaim,
+    Draft,
+    DraftInput,
+    Evidence,
+    Submission,
+)
+from app.services.speech_engine import handle_speech_engine_websocket
 from app.services.store import Store
 from app.routers.livekit import router as livekit_router
 
@@ -162,7 +174,9 @@ def create_app(database_path=None):
     def inbox():
         with store.connect() as db:
             return [Submission.model_validate_json(row[0]) for row in db.execute('SELECT data FROM inbox ORDER BY rowid DESC')]
-
+    @app.websocket("/api/speech-engine")
+    async def speech_engine_websocket(websocket: WebSocket):
+        await handle_speech_engine_websocket(websocket)
     return app
 
 app = create_app()
