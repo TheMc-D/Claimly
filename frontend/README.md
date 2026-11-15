@@ -47,17 +47,41 @@ For the deployed demo backend, use `https://claimly-api-rkbt.onrender.com`.
 The backend's `FRONTEND_URL` must match the browser origin (normally
 `http://localhost:3000`). See `backend/README.md` for starting the API.
 
-To check the frontend flow, open `/claims/new`, create a claim with a small
-PNG/JPEG/WebP image or MP4/WebM video, review its quality manually as `Usable`,
-generate the template draft, and explicitly submit after reviewing it. A demo
-receipt should appear. Refresh the detail page to confirm server persistence,
-and open `/claims` to see claims remembered by this browser.
+The frontend adapts the Figma export to the existing Next.js App Router:
+`/` is the landing page, `/claims` is the shared demo dashboard, and
+`/claims/[id]` shows live claim details, evidence, receipts, and corrections.
+The old ID-entry page at `/claims/new` redirects to `/claims`.
 
-The backend has no list endpoint: My Claims stores only IDs in localStorage,
-scoped to the configured backend, then fetches their data from the API. Clearing
-browser storage removes this local index. Claim detail links still work while
-the backend retains their records. Evidence assessment is manual; generation is
-the backend's template fallback; submission saves to a fictional inbox without
-sending email. AI/video/voice provider integrations are separate.
+For the hackathon, all backend records belong to one shared demo customer.
+The dashboard calls `GET /api/claims` on load, every five seconds while visible,
+and when returning to the tab. No login, localStorage index, claim ID entry,
+or SMS is needed. A new browser/device using the same backend sees the same
+claims automatically. This is a shared demo, not account-based user isolation.
 
-Checks: `npx next typegen`, `npx tsc --noEmit`, and `npm run lint`.
+The video agent owns creation, evidence, confirmation during the call, and
+submission. The site is for viewing and tracking afterward; it no longer has
+customer draft generation/submission controls. To demonstrate it, create and
+submit a synthetic claim using the agent or backend `/docs`, then open My Claims
+and watch it appear. The actual video/AI integration remains a separate service.
+
+Edit claim opens `/claims/[id]/edit`, a full review page prefilled with product,
+customer and purchase details, issue, preferred resolution, written request,
+and collected evidence. Save changes updates the same claim through
+`PUT /api/claims/{id}` and returns to its details page. Cancel saves nothing.
+Optional customer/retailer/order/date fields are now supported by the backend.
+
+Edits retain the original submission and inbox receipt, record the previous
+values in `revisions`, and increment `version` to prevent stale editors from
+overwriting newer edits. The details page shows the current request and offers
+View original submitted request after editing. Saving does not resend anything
+to a merchant. The earlier correction-request form has been removed; the legacy
+corrections API remains compatible for existing records/integrations.
+
+Deploy the updated backend as well as the frontend. Existing records need no
+schema migration; optional metadata, version, and revision history have defaults.
+
+Downloads are plain text (`.txt`), not PDFs. Submission still means storage in a
+fictional inbox, not email delivery or a merchant decision.
+
+Checks: `npx next typegen`, `npx tsc --noEmit`, `npm run build`.
+Backend checks: from `backend/`, `.venv/bin/python -m unittest discover -s tests -v`.

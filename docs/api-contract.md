@@ -28,7 +28,9 @@ file contents are stored without decoding or malware scanning.
 | GET | `/` | — | 200 `{ "message": "Welcome to Claimly API" }` |
 | GET | `/api/health` | — | 200 `{ "status": "ok" }` |
 | POST | `/api/claims` | CreateClaim JSON | 201 Claim |
+| GET | `/api/claims` | — | 200 Claim array, newest first (shared demo customer) |
 | GET | `/api/claims/{id}` | — | 200 Claim |
+| PUT | `/api/claims/{id}` | EditClaim JSON | 200 updated Claim; original receipt preserved |
 | POST | `/api/claims/{id}/evidence` | multipart field `file` | 201 updated Claim |
 | GET | `/api/claims/{id}/evidence/{evidence_id}/content` | — | 200 original media bytes, declared Content-Type |
 | POST | `/api/claims/{id}/evidence/{evidence_id}/assessment` | Assessment JSON | 200 updated Claim |
@@ -36,6 +38,7 @@ file contents are stored without decoding or malware scanning.
 | POST | `/api/claims/{id}/generate` | no body | 200 Claim with fallback draft |
 | PUT | `/api/claims/{id}/draft` | DraftInput JSON | 200 Claim with AI/reviewed draft |
 | POST | `/api/claims/{id}/submit` | no body | 200 Submission |
+| POST | `/api/claims/{id}/corrections` | CorrectionInput JSON | 201 updated Claim with pending correction |
 | GET | `/api/merchant/inbox` | — | 200 Submission array, newest first |
 
 ### CreateClaim
@@ -152,8 +155,8 @@ duplicate inbox message. The receipt is also available as `Claim.submission`.
 
 `draft` → `ready` when a draft is generated or saved → `submitted` on submit.
 Uploading more evidence or changing an assessment clears the existing draft and
-returns status to `draft`, requiring review again. Submitted claims reject all
-mutations except repeat submit (which returns the existing receipt).
+returns status to `draft`, requiring review again. Submitted claims reject evidence and draft mutations. Repeat submit returns the
+existing receipt. Dashboard edits use the separate versioned PUT endpoint below.
 
 | Status | Meaning |
 | --- | --- |
@@ -187,3 +190,58 @@ authorization, pagination, or real merchant delivery in this demo. All reachable
 clients can access data: use synthetic data only. CORS allows `FRONTEND_URL`
 (default `http://localhost:3000`); it is not access control. See
 [backend deployment instructions](../backend/README.md) for Docker and GoDaddy.
+
+
+## Shared demo dashboard and post-submission corrections
+
+For the hackathon, `GET /api/claims` returns all stored claims as one shared demo
+customer, newest first. It requires no browser-local ID index. This is not an
+account endpoint: no authentication or per-customer isolation is implemented.
+Use synthetic demo records only. The dashboard refreshes every five seconds.
+The agent creates and submits using the existing endpoints during the call;
+customers view the results afterward without entering an ID.
+
+`POST /api/claims/{id}/corrections` accepts:
+
+```json
+{
+  "message": "The damaged speaker is on the right, not the left.",
+  "request_id": "cc0aac36-6493-414e-89df-0589f0522791"
+}
+```
+
+`message` is trimmed, required, nonblank, and at most 4000 characters.
+`request_id` is a required client-generated UUID retained for retries. Only
+submitted claims accept corrections (409 otherwise; missing claims return 404).
+The response is the updated Claim with `corrections`, an array of
+`{ "id": "<request_id>", "message": "...", "requested_at": "<UTC timestamp>", "status": "pending" }`.
+Old records default to `corrections: []`. Retrying the same key/message returns
+the saved result without appending; reusing the key with different text returns
+409. A distinct request needs a new UUID.
+
+Corrections are appended separately. Original product/issue/resolution, draft,
+submission snapshot, claim status, and merchant inbox remain unchanged. Normal
+submitted-state edit restrictions still apply. These are pending demo requests,
+not merchant delivery, automatically applied edits, or a resolution workflow.
+
+
+## Full-page claim editing
+
+The website now uses Edit claim and a full review page, rather than a correction
+request form. `PUT /api/claims/{id}` accepts product, issue, requested_resolution,
+optional customer_name/brand_model/retailer/order_number (trimmed strings up to
+200 characters; default empty), purchase_date/problem_noticed_date (ISO dates or
+null), draft (the full DraftInput or null), and the last-read integer `version`.
+The optional metadata is also accepted on creation.
+
+Claims default to version 0. A real edit increments version, sets edited_at, and
+appends `{version, edited_at, previous_details, previous_draft}` to revisions.
+A version mismatch returns 409; reload before overwriting newer changes.
+No-op saves do not add history. A submitted claim must retain a nonnull draft.
+Submitted status, evidence, submission snapshot, and inbox receipt remain intact.
+Draft/ready claims retain the usable-evidence requirement for saving a draft.
+Edits update the dashboard record only; they do not resend to a merchant.
+
+The former corrections endpoint is retained for compatibility, but no longer has
+a customer-facing form. Old records remain readable with default version 0,
+empty revisions, and empty optional metadata.

@@ -4,7 +4,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api, jsonRequest, rememberClaim, uploadEvidence, validateEvidence, type Claim } from "@/lib/api";
+import { api, jsonRequest, uploadEvidence, validateEvidence, type Claim } from "@/lib/api";
 
 export default function ClaimForm() {
   const [product, setProduct] = useState("");
@@ -24,7 +24,7 @@ export default function ClaimForm() {
       let id = claimId;
       if (!id) {
         const claim = await api<Claim>("/claims", jsonRequest("POST", { product, issue, requested_resolution: resolution }));
-        id = claim.id; setClaimId(id); rememberClaim(id);
+        id = claim.id; setClaimId(id);
       }
       if (evidence) await uploadEvidence(id, evidence);
       router.push(`/claims/${id}`);

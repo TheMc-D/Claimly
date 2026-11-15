@@ -1,40 +1,17 @@
-
 import Link from "next/link";
+import { type Claim, claimProgress, formatDate, shortClaimId, statusLabel } from "@/lib/api";
+import { ArrowRight } from "./Icons";
+import EvidencePreview from "./EvidencePreview";
 
-export type Claim = {
-  id: string;
-  product: string;
-  issue: string;
-  status: string;
-};
-
-type ClaimCardProps = {
-  claim: Claim;
-};
-
-export default function ClaimCard({ claim }: ClaimCardProps) {
-  return (
-    <Link
-      href={`/claims/${claim.id}`}
-      className="block rounded-2xl border border-slate-200 bg-white p-6 transition hover:border-blue-300 hover:shadow-sm"
-    >
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-xl font-semibold text-slate-900">
-          {claim.product}
-        </h2>
-
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
-          {claim.status}
-        </span>
-      </div>
-
-      <p className="mt-3 text-slate-600">
-        {claim.issue}
-      </p>
-
-      <p className="mt-4 text-sm font-medium text-blue-600">
-        View Details →
-      </p>
-    </Link>
-  );
+export default function ClaimCard({ claim }: { claim: Claim }) {
+  const progress = claimProgress(claim);
+  const photo = claim.evidence.find(item => item.content_type.startsWith("image/"));
+  return <Link href={`/claims/${encodeURIComponent(claim.id)}`} className="claim-card" aria-label={`View details for ${claim.product}`}>
+    <EvidencePreview key={photo?.id || claim.id} claimId={claim.id} evidence={photo} compact />
+    <div className="claim-main"><div className="claim-title"><span title={claim.id}>{shortClaimId(claim.id)}</span><h3>{claim.product}</h3><p>{claim.issue}</p></div><span className="claim-evidence-count">{claim.evidence.length} evidence file{claim.evidence.length === 1 ? "" : "s"} · {claim.requested_resolution} requested</span>{claim.edited_at && <span className="claim-correction-note">Edited {formatDate(claim.edited_at)}</span>}</div>
+    <div className="claim-date"><small>Created</small><span>{formatDate(claim.created_at)}</span></div>
+    <div className="claim-progress"><div><small>Preparation</small><strong>{progress.completed} of 3</strong></div><span role="progressbar" aria-label="Claim preparation" aria-valuemin={0} aria-valuemax={3} aria-valuenow={progress.completed}><i style={{ width: `${progress.percent}%` }} /></span></div>
+    <span className={`status status--${claim.status}`}><i />{statusLabel(claim)}</span>
+    <span className="claim-view-details">View details <ArrowRight /></span>
+  </Link>;
 }
