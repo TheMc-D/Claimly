@@ -73,3 +73,25 @@ customer data.
 Sources: [Render Docker](https://render.com/docs/docker),
 [persistent disks](https://render.com/docs/disks),
 [GoDaddy CNAME records](https://www.godaddy.com/help/add-a-cname-record-19236).
+
+## Hackathon dashboard
+
+The demo now uses `GET /api/claims` for a shared customer across devices, with
+newest claims first. It intentionally lists every synthetic demo claim; there
+is no customer authentication or isolation.
+
+`POST /api/claims/{id}/corrections` appends a pending correction after submission.
+It requires a nonblank `message` (up to 4000 characters) and a UUID `request_id`
+for safe retries. Original submissions and inbox receipts are preserved. See
+`docs/api-contract.md` for details. Deploy these backend routes together with
+the updated frontend. No schema migration is needed for existing records.
+
+## Full claim editing
+
+`PUT /api/claims/{id}` updates the dashboard details and written request using
+the current `version` as an optimistic concurrency check. Optional customer,
+retailer, brand/model, order number, and purchase/issue dates are supported on
+creation and editing. A submitted claim stays submitted and retains its original
+receipt/inbox snapshot; previous values are recorded in revisions. Edits are not
+merchant resubmissions. The frontend now uses a full Edit claim page instead of
+the earlier correction-request form.

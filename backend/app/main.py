@@ -1,4 +1,4 @@
-﻿import os
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -10,6 +10,10 @@ from app.models.claims import (
     Assessment,
     CameraInstructions,
     Claim,
+    ClaimRevision,
+    EditClaim,
+    Correction,
+    CorrectionInput,
     CreateClaim,
     Draft,
     DraftInput,
@@ -17,6 +21,7 @@ from app.models.claims import (
     Submission,
 )
 from app.services.speech_engine import handle_speech_engine_websocket
+
 from app.services.store import Store
 from app.routers.livekit import router as livekit_router
 
@@ -75,10 +80,44 @@ def create_app(database_path=None):
         with store.connect() as db:
             return save(db, claim)
 
+    @app.get('/api/claims', response_model=list[Claim])
+    def list_demo_claims():
+        # This MVP uses one shared demo customer; no account isolation is provided.
+        with store.connect() as db:
+            claims = [Claim.model_validate_json(row[0]) for row in db.execute('SELECT data FROM claims')]
+            return sorted(claims, key=lambda claim: (claim.created_at, claim.id), reverse=True)
+
     @app.get('/api/claims/{claim_id}', response_model=Claim)
     def retrieve(claim_id: str):
         with store.connect() as db:
             return get(db, claim_id)
+
+    @app.put('/api/claims/{claim_id}', response_model=Claim)
+    def edit_claim(claim_id: str, payload: EditClaim):
+        with store.connect() as db:
+            claim = get(db, claim_id)
+            if payload.version != claim.version:
+                raise HTTPException(409, 'This claim was edited elsewhere. Reload it before saving your changes.')
+            if claim.status == 'submitted' and payload.draft is None:
+                raise HTTPException(422, 'A submitted claim must keep its written request')
+            if payload.draft is not None and claim.status != 'submitted' and claim.camera.retake_required:
+                raise HTTPException(409, 'Mark at least one evidence item usable before saving a draft')
+            details = CreateClaim(**payload.model_dump(include=set(CreateClaim.model_fields)))
+            draft = Draft(**payload.draft.model_dump()) if payload.draft else None
+            previous = CreateClaim(**claim.model_dump(include=set(CreateClaim.model_fields)))
+            if previous == details and claim.draft == draft:
+                return claim
+            edited_at = now()
+            claim.revisions.append(ClaimRevision(version=claim.version, edited_at=edited_at, previous_details=previous, previous_draft=claim.draft))
+            for field in CreateClaim.model_fields:
+                setattr(claim, field, getattr(details, field))
+            claim.draft = draft
+            claim.version += 1
+            claim.edited_at = edited_at
+            if claim.status != 'submitted':
+                claim.status = 'ready' if draft else 'draft'
+            # Dashboard edits never replace the historical submission or inbox receipt.
+            return save(db, claim)
 
     @app.post('/api/claims/{claim_id}/evidence', response_model=Claim, status_code=201)
     async def upload(claim_id: str, file: UploadFile = File(...)):
@@ -169,6 +208,22 @@ def create_app(database_path=None):
             claim.submission, claim.status = submission, 'submitted'
             save(db, claim)
             return submission
+
+    @app.post('/api/claims/{claim_id}/corrections', response_model=Claim, status_code=201)
+    def request_correction(claim_id: str, payload: CorrectionInput):
+        with store.connect() as db:
+            claim = get(db, claim_id)
+            if claim.status != 'submitted' or claim.submission is None:
+                raise HTTPException(409, 'Corrections can only be requested after submission')
+            correction_id = str(payload.request_id)
+            existing = next((item for item in claim.corrections if item.id == correction_id), None)
+            if existing:
+                if existing.message != payload.message:
+                    raise HTTPException(409, 'This request ID was already used for another correction')
+                return claim
+            claim.corrections.append(Correction(id=correction_id, message=payload.message, requested_at=now()))
+            # Append a pending request; never rewrite the original draft, receipt, or inbox.
+            return save(db, claim)
 
     @app.get('/api/merchant/inbox', response_model=list[Submission])
     def inbox():
