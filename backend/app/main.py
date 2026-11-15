@@ -6,6 +6,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile, Response
 from fastapi.middleware.cors import CORSMiddleware
 from app.models.claims import Assessment, CameraInstructions, Claim, CreateClaim, Draft, DraftInput, Evidence, Submission
 from app.services.store import Store
+from app.routers.livekit import router as livekit_router
 
 MAX_UPLOAD = 10 * 1024 * 1024
 MEDIA_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'}
@@ -30,6 +31,7 @@ def camera(evidence):
 
 def create_app(database_path=None):
     app = FastAPI(title='Claimly API', description='Local claims MVP; fictional deliveries only', version='1.0.0')
+    app.include_router(livekit_router)
     app.add_middleware(CORSMiddleware, allow_origins=[os.getenv('FRONTEND_URL', 'http://localhost:3000')], allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
     store = Store(str(database_path or os.getenv('CLAIMLY_DB_PATH', 'claimly.db')))
 

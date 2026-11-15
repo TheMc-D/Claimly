@@ -5,6 +5,10 @@ interactive documentation: `/docs`. All JSON field names use snake_case.
 IDs are opaque UUID strings; timestamps are UTC ISO 8601 strings.
 The deployed HTTPS base URL will be shared after hosting and DNS are configured.
 
+LiveKit token generation and voice worker dispatch are documented separately in
+[livekit-integration.md](livekit-integration.md), including deployment status,
+server-to-server authentication, and the agreed room/participant names.
+
 ## Team ownership
 
 | Owner | Integration |
