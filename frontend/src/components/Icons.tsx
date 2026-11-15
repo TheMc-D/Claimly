@@ -124,10 +124,9 @@ export const ChevronDown = (p: Props) => (
     <path d="m6 9 6 6 6-6" />
   </Icon>
 );
+// A conversation becomes a claim: the check is cut out of a speech bubble.
 export const Logo = (p: Props) => (
-  <Icon {...p} viewBox="0 0 32 32">
-    <path d="M24.5 6.5A11 11 0 1 0 25 24" />
-    <path d="M12 8.5a8.5 8.5 0 0 0 11 12" />
-    <path d="M17.5 4.8a11.5 11.5 0 0 1 9.7 9.7" />
-  </Icon>
+  <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" {...p}>
+    <path fill="currentColor" fillRule="evenodd" clipRule="evenodd" d="M10 3h12a7 7 0 0 1 7 7v9a7 7 0 0 1-7 7h-8l-8 5v-6.3A7 7 0 0 1 3 19v-9a7 7 0 0 1 7-7Z M8.5 14.5l2.5-2.5 3.5 3.5L22 8l2.5 2.5-10 10Z" />
+  </svg>
 );

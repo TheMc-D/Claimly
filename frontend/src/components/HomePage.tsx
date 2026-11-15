@@ -26,14 +26,15 @@ export default function HomePage() {
             <Sparkles /> AI-powered claims, thoughtfully guided
           </div>
           <h1 className="reveal delay-2">
-            Your Journey to
+            Less explaining.
             <br />
-            <em>Resolution</em> Starts Here.
+            <em>More reclaiming.</em>
           </h1>
           <p className="reveal delay-3">
-            Turn damaged deliveries into clear, compelling claims.
+            Show us what went wrong on a video call.
             <br />
-            Claimly guides every step, so you can move forward.
+            Your AI agent gathers the evidence and files your claim.
+            Track it all in your dashboard.
           </p>
           <div className="hero-actions reveal delay-4">
             <Button onClick={() => navigate()} icon={<ArrowRight />}>
