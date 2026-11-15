@@ -47,6 +47,11 @@ async def dispatch(response: Response):
     except LiveKitConfigurationError as error:
         raise HTTPException(503, str(error)) from error
     except Exception:
-        # Do not forward provider errors, which can contain connection details.
-        logging.getLogger(__name__).warning('LiveKit agent dispatch failed')
-        raise HTTPException(502, 'LiveKit dispatch could not be confirmed; retry the request') from None
+        # Log the underlying exception in Render, but never expose it to clients.
+        logging.getLogger(__name__).exception(
+            'LiveKit agent dispatch failed'
+        )
+        raise HTTPException(
+            502,
+            'LiveKit dispatch could not be confirmed; retry the request'
+        ) from None
